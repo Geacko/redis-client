@@ -1,0 +1,8 @@
+{
+  "name": "@geacko/deno-redis",
+  "version": "1.0.0-beta",
+  "exports": "./mod.ts",
+  "imports": {
+    "@geacko/resp3-parser": "jsr:@geacko/resp3-parser@^2.1.1-beta"
+  }
+}
