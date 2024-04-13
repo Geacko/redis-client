@@ -71,6 +71,7 @@ export class CommandProcessor {
 
         const decode = new Resp3DecoderStream({
             useRecord     : true,
+            usePush       : true,
             useAttributes : true,
         })
 
