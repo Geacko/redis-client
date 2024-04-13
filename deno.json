@@ -1,5 +1,5 @@
 {
-  "name": "@geacko/deno-redis",
+  "name": "@geacko/redis-client",
   "version": "1.0.0-beta",
   "exports": "./mod.ts",
   "imports": {
