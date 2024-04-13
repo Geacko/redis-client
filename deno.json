@@ -1,8 +1,8 @@
 {
   "name": "@geacko/redis-client",
-  "version": "1.0.0-beta",
+  "version": "1.0.1",
   "exports": "./mod.ts",
   "imports": {
-    "@geacko/resp3-parser": "jsr:@geacko/resp3-parser@^2.1.1-beta"
+    "@geacko/resp3-parser": "jsr:@geacko/resp3-parser@^2.1.3"
   }
 }
