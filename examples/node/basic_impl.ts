@@ -46,7 +46,7 @@ await using db = new Client(await connect({
 }))
 
 // switch protocol RESPv2 -> RESPv3
-await db.send([ 'HELLO', '3' ]).repl()
+await db.send([ 'HELLO', '3' ]).read()
 
 // send 100 batches of 10_000 'PING' each
 for (let i = 0; i < 100; i++) {
@@ -54,6 +54,6 @@ for (let i = 0; i < 100; i++) {
     console.log(await db.send(cmds(
         (i + 0) * 10_000,
         (i + 1) * 10_000,
-    )).replall())
+    )).readall())
 
 }

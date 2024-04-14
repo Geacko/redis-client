@@ -13,13 +13,12 @@ const db = new Client(await Deno.connect({
 // ----------------------------------------
 {
 
-    // send commands using `send` multiple times
     for (let i = 0; i < 100; i++) {
         db.send([ 'PING' , i ])
     }
     
     // read all replies
-    console.log(await Array.fromAsync(db))
+    console.log(await db.readall())
 
 }
 
@@ -33,11 +32,8 @@ const db = new Client(await Deno.connect({
         return [ 'PING' , i ] as Command
     })
     
-    // send commands
-    db.send(batch)
-    
-    // read all replies
-    console.log(await Array.fromAsync(db))
+    // send & read all replies
+    console.log(await db.send(batch).readall())
 
 }
 
@@ -54,11 +50,8 @@ const db = new Client(await Deno.connect({
     
     }
     
-    // send commands
-    db.send(cmds())
-    
-    // read all replies
-    console.log(await Array.fromAsync(db))
+    // send & read all replies
+    console.log(await db.send(cmds()).readall())
 
 }
 

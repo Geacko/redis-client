@@ -44,6 +44,12 @@ export class CommandProcessor {
     private queue = new CommandEncoderQueue()
 
     /**
+     *  Set to "true" if no read and write 
+     *  operations are allowed.
+     */
+    private closed = false
+
+    /**
      *  Number of replies available for 
      *  reading.
      */
@@ -57,6 +63,13 @@ export class CommandProcessor {
      */
     get isWriting() {
         return this.currentProcess instanceof Promise
+    }
+
+    /**
+     *  Returns `true` if processor is closed.
+     */
+    get isClosed() : boolean {
+        return this.closed
     }
 
     /**
@@ -85,6 +98,10 @@ export class CommandProcessor {
      *  @param cmd Command to add to the queue.
      */
     add(cmd: Command) {
+
+        if (this.closed) {
+            return
+        }
 
         this.queue.add(cmd)
         this.count++    
@@ -115,7 +132,7 @@ export class CommandProcessor {
             readable = queue.next().value
         )) {
     
-            await readable.pipeTo(output, {
+            this.closed || await readable.pipeTo(output, {
                 preventClose: true,
                 preventAbort: true,
             })
@@ -125,10 +142,15 @@ export class CommandProcessor {
     }
 
     /**
-     *  Reads the next available 
-     *  response in the stream.
+     *  Reads the next available response 
+     *  in the stream. Returns always `null` if
+     *  the processor is closed.
      */
     async read() {
+
+        if (this.closed) {
+            return null
+        }
 
         const {
             value: x
@@ -139,6 +161,21 @@ export class CommandProcessor {
 
         return x
 
+    }
+
+    /**
+     *  Makes all future read and write 
+     *  operations impossible.\
+     *  Note: Does not close underlying streams.
+     */
+    close() {
+
+        // clear state
+        this.count          = 0
+        this.currentProcess = void 0
+        this.closed         = true
+        this.queue.clear()
+            
     }
 
 }

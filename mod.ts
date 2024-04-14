@@ -7,9 +7,5 @@ export type {
 } from './src/types.ts'
 
 export {
-    StreamHandler
-} from './src/stream_handler.ts'
-
-export {
     Client
 } from './src/client.ts'

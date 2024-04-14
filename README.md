@@ -12,7 +12,7 @@ await using db = new Client(await Deno.connect({
 
 // switch protocol RESPv2 -> RESPv3
 console.log(
-    await db.send([ 'HELLO' , '3' ]).repl()
+    await db.send([ 'HELLO' , '3' ]).read()
 )
 
 function* cmds() {
@@ -28,7 +28,7 @@ db.send(cmds())
     
 // read all replies
 console.log(
-    await db.replall()
+    await db.readall()
 )
 ```
 
@@ -69,7 +69,7 @@ await using db = new Client(await connect({
 
 // switch protocol RESPv2 -> RESPv3
 console.log(
-    await db.send([ 'HELLO' , '3' ]).repl()
+    await db.send([ 'HELLO' , '3' ]).read()
 )
 
 function* cmds() {
@@ -85,6 +85,6 @@ db.send(cmds())
     
 // read all replies
 console.log(
-    await db.replall()
+    await db.readall()
 )
 ```

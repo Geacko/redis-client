@@ -8,7 +8,7 @@ const db = new Client(await Deno.connect({
     port: 6379
 }))
 
-console.log(await db.send([ 'HELLO' , '3' ]).repl())
+console.log(await db.send([ 'HELLO' , '3' ]).read())
 
 const count     = 50
 const chunksize = 10
@@ -44,6 +44,6 @@ const blob = {
     }
 }
 
-console.log(await db.send([ 'PING' , blob ]).repl())
+console.log(await db.send([ 'PING' , blob ]).read())
 
 db.close()

@@ -78,6 +78,17 @@ export class Composer {
     }
 
     /**
+     *  reset the composer
+     */
+    clear() {
+        
+        this.components = [
+            // ...
+        ]
+
+    }
+
+    /**
      *  flush & create a new Iterator
      */
     compose() : ReadableStream<Uint8Array> | null {
@@ -107,7 +118,7 @@ export class Composer {
 
         }
 
-        const x = xs[0]
+        const x = xs[0]!
 
         if (x instanceof Uint8Array) {
             return ReadableStream.from([ x ])

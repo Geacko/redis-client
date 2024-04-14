@@ -27,8 +27,8 @@ export type CommandArgument
     | number 
     | bigint 
     | Uint8Array
-    | ReadableStreamProvider
     | ReadableStream<Uint8Array>
+    | ReadableStreamProvider
 
 /**
  *  Command type
@@ -49,19 +49,21 @@ export type CommandBatch
 export interface UnderlyingConnection {
     
     /** 
-     *  Readable stream linked 
-     *  to the connection 
+     *  Readable stream linked to the 
+     *  connection 
      */
     readonly readable: ReadableStream<Uint8Array>
     
     /** 
-     *  Writable stream linked 
-     *  to the connection 
+     *  Writable stream linked to the 
+     *  connection 
      */
     readonly writable: WritableStream<Uint8Array>
 
     /**
-     *  Close the connection
+     *  Function called when the `close` method 
+     *  of the `Client` instance encapsulating 
+     *  the connection is called.
      */
     close(): void
 

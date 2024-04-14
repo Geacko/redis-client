@@ -29,7 +29,7 @@ const enum Char {
 export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>, void> {
 
     /**
-     *  Chunk bytes composer.
+     *  Data composer.
      */
     private composer = new Composer()
 
@@ -54,6 +54,18 @@ export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>,
      */
     add(cmd: Command) {
         this.commands.push(cmd)
+    }
+
+    /**
+     *  Clear the queue
+     */
+    clear() {
+
+        this.composer.clear()
+        this.commands = [
+            // ...
+        ]
+    
     }
 
     /**
