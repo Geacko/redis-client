@@ -42,8 +42,8 @@ function connect(
 
     let s!: Socket
 
-    // convert NodeJS net.Socket to UnderlyingConnection type
-    return new Promise<UnderlyingConnection>(ret => (s = createConnection(opts, () => {
+    // convert NodeJS net.Socket to Connection type
+    return new Promise<Connection>(ret => (s = createConnection(opts, () => {
         
         s.pause()
 

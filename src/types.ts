@@ -44,9 +44,9 @@ export type CommandBatch
     = Parameters<typeof Array.from<Command>>[0]
 
 /**
- *  UnderlyingConnection interface
+ *  Connection interface
  */
-export interface UnderlyingConnection {
+export interface Connection {
     
     /** 
      *  Readable stream linked to the 

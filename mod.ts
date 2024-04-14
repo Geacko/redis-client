@@ -2,7 +2,7 @@ export type {
     CommandArgument,
     Command,
     CommandBatch,
-    UnderlyingConnection,
+    Connection,
     ReadableStreamProvider,
 } from './src/types.ts'
 

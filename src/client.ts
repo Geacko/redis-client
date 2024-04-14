@@ -5,7 +5,7 @@ import type {
 import type { 
     Command,
     CommandBatch,
-    UnderlyingConnection
+    Connection
 } from './types.ts'
 
 import { 
@@ -30,7 +30,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
     /**
      *  underlying connection
      */
-    #conn: UnderlyingConnection
+    #conn: Connection
 
     /**
      *  Number of replies available for 
@@ -84,7 +84,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
      *  @param writable Output stream
      */
     constructor(
-        connection: UnderlyingConnection
+        connection: Connection
     ) {
 
         this.#conn = connection
