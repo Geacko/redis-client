@@ -20,11 +20,11 @@ function* cmds(
 }
 
 // Send 1,000,000 'PING'
-for (let i = 0; i < 1_000; i++) {
+for (let i = 0; i < 100; i++) {
     
     db.send(cmds(
-        (i + 0) * 1_000, 
-        (i + 1) * 1_000,
+        (i + 0) * 10_000, 
+        (i + 1) * 10_000,
     ))
 
 }

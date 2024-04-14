@@ -12,7 +12,8 @@ import {
 } from './command_processor.ts'
 
 import {
-    isCmd
+    isCmd,
+    clampedFromAsyncLike
 } from './utils.ts'
 
 /**
@@ -159,6 +160,37 @@ export class StreamHandler implements AsyncIterable<Resp3Reply> {
      */
     repl<T extends Resp3Reply>() : Promise<T> {
         return this.#proc.read() as Promise<T>
+    }
+
+    /**
+     *  Returns multiples replies as an array.
+     *  If the `count` parameter is specified and is 
+     *  less than the number of available replies, 
+     *  returns `count` replies. If the `count` parameter 
+     *  is missing or greater than the number of available 
+     *  replies, returns all available replies.
+     *  
+     *  **Example**
+     * 
+     *  ```ts
+     *  db.send([ 'HELLO' , 3 ])
+     *  db.send([ 'PING' ])
+     *  db.send([ 'HSET' , 'some-key' , 'a' , 0 , 'b' , 1 ])
+     * 
+     *  type Replies = [ 
+     *      Record<string, any>, string, number 
+     *  ]
+     * 
+     *  console.log(await db.replall<Replies>())
+     *  ```
+     * 
+     */
+    replall<T extends Resp3Reply[]>(count: number = Infinity) : Promise<T> {
+
+        return clampedFromAsyncLike<T>(
+            0, count, this.commandReplyCount, () => this.repl()
+        )
+
     }
 
     /**

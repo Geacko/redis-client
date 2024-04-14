@@ -48,3 +48,12 @@ export function computeByteCount(s: string) {
     return m
 
 }
+
+/** @internal */
+export function clampedFromAsyncLike<T extends Array<unknown>>(
+    a: number, x: number, b: number, map: () => Promise<unknown>
+) {
+
+    return Promise.all(Array.from({ length: Math.min(Math.max(a, x), b) } , map)) as Promise<T>
+
+}

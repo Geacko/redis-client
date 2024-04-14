@@ -1,146 +1,59 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import type {
-    UnderlyingConnection, 
-    Command
-} from '../../mod.ts'
+import { Client, type UnderlyingConnection } from '../../mod.ts'
+import { createConnection, type Socket, type NetConnectOpts } from 'node:net'
+import { Readable, Writable } from 'node:stream'
 
-import { 
-    Client
- } from '../../mod.ts'
-
-import { 
-    connect, type Socket
-} from "node:net"
-
-function createReadable(
-    s: Socket
+function connect(
+    opts: NetConnectOpts
 ) {
 
-    return new ReadableStream<Uint8Array>({
-    
-        pull(c) {
+    let s!: Socket
 
-            return new Promise(ret => setTimeout(() => {
-
-                const x = s.read()
-                
-                x &&
-                c.enqueue(x)
-
-                ret()
-
-            }, 24))
+    // convert NodeJS net.Socket to UnderlyingConnection type
+    return new Promise<UnderlyingConnection>(ret => (s = createConnection(opts, () => {
         
-        }
-
-    })
-
-}
-
-function createWritable(
-    s: Socket
-) {
-    
-    return new WritableStream<Uint8Array>({
-    
-        write(chunk) {
-            s.write(chunk)
-        }
-
-    })
-
-}
-
-function createConnection(
-    opts : { port: number }
-) : Promise<UnderlyingConnection> {
-
-    return new Promise(ret => {
-
-        const s = connect(opts, () => {
-            
-            ret(Object.freeze({
-            
-                readable: createReadable(s),
-                writable: createWritable(s),
-        
-                close() {
-                    s.destroy()
-                }
-        
-            }))
-
-        })
-
         s.pause()
 
-    })
+        ret({
+
+            readable: Readable.toWeb(s) as ReadableStream<Uint8Array>,
+            writable: Writable.toWeb(s) as WritableStream<Uint8Array>,
+
+            close() {
+                s.destroy()
+            }
+        
+        })
+
+    })))
 
 }
 
-const db = new Client(await createConnection({ 
-    port: 6379 
+function* cmds(
+    a: number, 
+    b: number
+) {
+    
+    while (a < b) {
+        yield [ 'PING' , a++ ] as const
+    }
+
+}
+
+await using db = new Client(await connect({
+    port: 6379
 }))
 
-// ----------------------------------------
-// Test simple send
-// ----------------------------------------
-{
+// switch protocol RESPv2 -> RESPv3
+await db.send([ 'HELLO', '3' ]).repl()
 
-    console.log(await db.send([ 'HELLO' , '3' ]).repl())
+// send 100 batches of 10_000 'PING' each
+for (let i = 0; i < 100; i++) {
 
-}
-
-// ----------------------------------------
-// Test pipeline
-// ----------------------------------------
-{
-
-    const cmds = function* () {
-
-        for (let i = 0; i < 100; i++) {
-            yield [ 'PING' , i ] as Command
-        }
-    
-    }
-    
-    db.send(cmds())
-    
-    console.log(await Array.fromAsync(db))
+    console.log(await db.send(cmds(
+        (i + 0) * 10_000,
+        (i + 1) * 10_000,
+    )).replall())
 
 }
-
-// ----------------------------------------
-// Test nop
-// ----------------------------------------
-{
-
-    const cmds = function*(
-        a: number,
-        b: number,
-    ) {
-    
-        while (a < b) {
-            yield [ 'PING' , a++ ] as Command
-        }
-    
-    }
-    
-    // Send 1,000,000 'PING'
-    for (let i = 0; i < 100; i++) {
-        
-        db.send(cmds(
-            (i + 0) * 10_000, 
-            (i + 1) * 10_000,
-        ))
-    
-    }
-
-    await db.nop().then(() => {
-        console.log('Complete !', db.commandReplyCount)
-    })
-
-}
-
-db.close()
