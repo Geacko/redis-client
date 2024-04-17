@@ -1,12 +1,12 @@
 import type { 
-    Resp3Reply 
-} from '@geacko/resp3-parser'
-
-import type { 
     Command,
     CommandBatch,
-    Connection
+    Connection,
 } from './types.ts'
+
+import type {
+    Reply
+} from '@geacko/resp3-parser'
 
 import { 
     CommandProcessor
@@ -20,7 +20,7 @@ import {
 /**
  *  Stream handler.
  */
-export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3Reply> {
+export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply> {
 
     /**
      *  command processor
@@ -72,7 +72,15 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
     }
 
     /**
-     *  Returns `true` if client is closed.
+     *  Returns `true` if client is closed. `false`
+     *  otherwise.
+     *  
+     *  **Example**
+     *  ```ts
+     *  console.log(db.isClosed) // false
+     *  db.close()
+     *  console.log(db.isClosed) // true
+     *  ```
      */
     get isClosed() : boolean {
         return this.#proc.isClosed
@@ -80,8 +88,6 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
 
     /**
      *  Constructor.
-     *  @param readable Input stream 
-     *  @param writable Output stream
      */
     constructor(
         connection: Connection
@@ -172,7 +178,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
      *  await db.read() // "2"
      *  ```
      */
-    read<T extends Resp3Reply>() : Promise<T> {
+    read<T extends Reply>() : Promise<T> {
         return this.#proc.read() as Promise<T>
     }
 
@@ -199,7 +205,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
      *  ```
      * 
      */
-    readall<T extends Resp3Reply[]>(count: number = Infinity) : Promise<T> {
+    readall<T extends Reply[]>(count: number = Infinity) : Promise<T> {
 
         return clampedFromAsyncLike<T>(
             0, count, this.commandReplyCount, () => this.read()
@@ -219,6 +225,8 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
      *  }
      *  
      *  db.nop().then(() => {
+     *      // We wait for all write operations to
+     *      // finish to close the client
      *      db.close()
      *  })
      *  ```
@@ -228,8 +236,17 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
     }
 
     /**
-     *  Close the connection.\
-     *  Note: Does not close underlying streams.
+     *  Closes the client if it is not already 
+     *  closed. Makes all future read and write 
+     *  operations impossible. Closing the 
+     *  client does not close the underlying 
+     *  streams.
+     * 
+     *  **Example**
+     *  ```ts
+     *  db.close()
+     *  console.log(await db.send([ 'PING' ]).read()) // null
+     *  ```
      */
     close() {
 
@@ -243,7 +260,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
     }
 
     /**
-     *  Iterates through all available replies. 
+     *  Iterates through all available replies.\ 
      *  Impementation of the `AsyncIterator` 
      *  protocol.
      * 
@@ -264,7 +281,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
      *  console.log(db.commandReplyCount) // 0
      *  ```
      */
-    [Symbol.asyncIterator]() : AsyncIterator<Resp3Reply> {
+    [Symbol.asyncIterator]() : AsyncIterator<Reply> {
 
         const proc = this.#proc
 
@@ -276,12 +293,12 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
                 done: !0
             }
 
-        } as AsyncIterator<Resp3Reply>
+        } as AsyncIterator<Reply>
 
     }
 
     /**
-     *  Close the connection. 
+     *  Calls `Client.close()`.\
      *  Implementation of the `Disposable`
      *  protocol.
      */
@@ -290,7 +307,8 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Resp3R
     }
 
     /**
-     *  Close the connection asynchronously. 
+     *  Calls `Client.close()` when all 
+     *  write operations are complete.\
      *  Implementation of the `Disposable`
      *  protocol.
      */

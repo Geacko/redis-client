@@ -3,7 +3,8 @@ import type {
 } from './types.ts'
 
 import { 
-    Resp3DecoderStream
+    Resp3DecoderStream,
+    Push
 } from '@geacko/resp3-parser'
 
 import { 
@@ -82,13 +83,7 @@ export class CommandProcessor {
         writable: WritableStream<Uint8Array>,
     ) {
 
-        const decode = new Resp3DecoderStream({
-            useRecord     : true,
-            usePush       : true,
-            useAttributes : true,
-        })
-
-        this.reader = readable.pipeThrough(decode).getReader()
+        this.reader = readable.pipeThrough(new Resp3DecoderStream()).getReader()
         this.output = writable
 
     }
@@ -155,6 +150,11 @@ export class CommandProcessor {
         const {
             value: x
         } = await this.reader.read()
+
+        // ignore it
+        if (x instanceof Push) {
+            return x
+        }
         
         this.count > 0 &&
         this.count--

@@ -1,6 +1,6 @@
 {
   "name": "@geacko/redis-client",
-  "version": "2.1.0-beta",
+  "version": "2.2.3-beta",
   "exports": "./mod.ts",
   "compilerOptions": {
     "noUnusedLocals": true,
@@ -9,6 +9,6 @@
     "noImplicitOverride": true
   },
   "imports": {
-    "@geacko/resp3-parser": "jsr:@geacko/resp3-parser@^2.2.0"
+    "@geacko/resp3-parser": "jsr:@geacko/resp3-parser@4.0.4"
   }
 }
