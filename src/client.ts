@@ -203,7 +203,7 @@ export class Client implements Disposable, AsyncIterable<Reply> {
      *  ```
      * 
      */
-    readall<T extends Reply[]>() {
+    readall<T extends Reply[]>() : Promise<T> {
 
         const {
             commandCount
