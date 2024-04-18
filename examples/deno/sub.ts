@@ -10,7 +10,6 @@ const db = new Client(await Deno.connect({
 }))
 
 console.log(await db.send([ 'HELLO' , '3' ]).read())
-
 console.log(await db.send([ 
     'SUBSCRIBE' , 'my_channel_name' 
 ]).read())

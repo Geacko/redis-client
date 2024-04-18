@@ -3,8 +3,7 @@ import type {
 } from './types.ts'
 
 import { 
-    Resp3DecoderStream,
-    Push
+    Resp3DecoderStream, Push
 } from '@geacko/resp3-parser'
 
 import { 
@@ -30,13 +29,18 @@ export class CommandProcessor {
      *  Result of current asynchronous 
      *  write process.
      */
-    private currentProcess?: Promise<void>
+    private currentWritingProcess?: Promise<void>
 
     /**
      *  Number of replies available for 
      *  reading.
      */
     private count = 0
+
+    /**
+     *  number of replies being decoded
+     */
+    private processing = 0
 
     /**
      *  Queue providing data to write 
@@ -51,11 +55,10 @@ export class CommandProcessor {
     private closed = false
 
     /**
-     *  Number of replies available for 
-     *  reading.
+     *  Number of pending commands.
      */
-    get commandReplyCount() {
-        return this.count
+    get commandCount() {
+        return Math.max(0, this.count - this.processing)
     }
 
     /**
@@ -63,7 +66,15 @@ export class CommandProcessor {
      *  is in progress. `false` otherwise.
      */
     get isWriting() {
-        return this.currentProcess instanceof Promise
+        return this.currentWritingProcess instanceof Promise
+    }
+
+    /**
+     *  Returns `true` if the reading process 
+     *  is in progress. `false` otherwise.
+     */
+    get isReading() {
+        return this.processing != 0
     }
 
     /**
@@ -75,8 +86,6 @@ export class CommandProcessor {
 
     /**
      *  constructor
-     *  @param readable Input stream 
-     *  @param writable Output stream
      */
     constructor(
         readable: ReadableStream<Uint8Array>,
@@ -90,7 +99,6 @@ export class CommandProcessor {
 
     /**
      *  Add new command to write.
-     *  @param cmd Command to add to the queue.
      */
     add(cmd: Command) {
 
@@ -108,8 +116,8 @@ export class CommandProcessor {
      */
     process() {
 
-        return this.currentProcess ??= this.processInternal().then(() => {
-               this.currentProcess = void 0
+        return this.currentWritingProcess ??= this.processInternal().then(() => {
+               this.currentWritingProcess = void 0
         })
     
     }
@@ -144,34 +152,38 @@ export class CommandProcessor {
             return null
         }
 
+        this.processing++
+
         const {
             value: x
         } = await this.reader.read()
 
-        // ignore it
-        if (x instanceof Push) {
-            return x
-        }
-        
-        this.count > 0 &&
+        this.processing--
+
+        this.count > 0 && !(x instanceof Push) &&
         this.count--
 
-        return x
-
+        return x!
+    
     }
 
     /**
-     *  Makes all future read and write 
-     *  operations impossible.\
-     *  Note: Does not close underlying streams.
+     *  Makes all future read and write operations 
+     *  impossible. Calling `close` releases the 
+     *  reader and writer locks.
      */
     close() {
 
         // clear state
-        this.count          = 0
-        this.currentProcess = void 0
-        this.closed         = true
+        this.count                 = 0
+        this.processing            = 0
+        this.currentWritingProcess = void 0
+        this.closed                = true
         this.queue.clear()
+
+        // release locks
+        this.writer.releaseLock()
+        this.reader.releaseLock()
             
     }
 

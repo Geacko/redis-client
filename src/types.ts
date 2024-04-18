@@ -17,13 +17,12 @@ export type Command = readonly [
 /**
  *  Command batch type
  */
-export type CommandBatch 
-    = Parameters<typeof Array.from<Command>>[0]
+export type CommandBatch = Iterable<Command> | ArrayLike<Command>
 
 /**
- *  Connection interface
+ *  Duplex interface
  */
-export interface Connection {
+export interface Duplex {
     
     /** 
      *  Readable stream linked to the 
@@ -37,6 +36,13 @@ export interface Connection {
      */
     readonly writable: WritableStream<Uint8Array>
 
+}
+
+/**
+ *  Closable interface
+ */
+export interface Closable {
+
     /**
      *  Function called when the `close` method 
      *  of the `Client` instance encapsulating 
@@ -45,3 +51,8 @@ export interface Connection {
     close(): void
 
 }
+
+/**
+ *  Conn interface
+ */
+export type Conn = Duplex & Closable

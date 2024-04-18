@@ -1,7 +1,7 @@
 import type { 
     Command,
     CommandBatch,
-    Connection,
+    Conn,
 } from './types.ts'
 
 import type {
@@ -13,14 +13,13 @@ import {
 } from './command_processor.ts'
 
 import {
-    isCmd,
-    clampedFromAsyncLike
+    isCmd
 } from './utils.ts'
 
 /**
  *  Stream handler.
  */
-export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply> {
+export class Client implements Disposable, AsyncIterable<Reply> {
 
     /**
      *  command processor
@@ -28,13 +27,12 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
     #proc: CommandProcessor
 
     /**
-     *  underlying connection
+     *  underlying duplex
      */
-    #conn: Connection
+    #conn: Conn
 
     /**
-     *  Number of replies available for 
-     *  reading.
+     *  Number of responses remaining.
      *  
      *  **Example**
      * 
@@ -43,15 +41,15 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  db.send(['PING', 0])
      *  db.send(['PING', 1])
      *  
-     *  console.log(db.commandReplyCount) // 2
+     *  console.log(db.commandCount) // 2
      *  await db.read() // "0"
-     *  console.log(db.commandReplyCount) // 1
+     *  console.log(db.commandCount) // 1
      *  await db.read() // "1"
-     *  console.log(db.commandReplyCount) // 0
+     *  console.log(db.commandCount) // 0
      *  ```
      */
-    get commandReplyCount() : number {
-        return this.#proc.commandReplyCount
+    get commandCount() : number {
+        return this.#proc.commandCount
     }
 
     /**
@@ -90,7 +88,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  Constructor.
      */
     constructor(
-        connection: Connection
+        connection: Conn
     ) {
 
         this.#conn = connection
@@ -205,11 +203,19 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  ```
      * 
      */
-    readall<T extends Reply[]>(count: number = Infinity) : Promise<T> {
+    readall<T extends Reply[]>() {
 
-        return clampedFromAsyncLike<T>(
-            0, count, this.commandReplyCount, () => this.read()
-        )
+        const {
+            commandCount
+        } = this
+
+        const out = new Array(commandCount)
+
+        for (let i = 0; i < commandCount; i++) {
+            out[i] = this.read()
+        }
+
+        return Promise.all(out) as Promise<T>
 
     }
 
@@ -238,9 +244,8 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
     /**
      *  Closes the client if it is not already 
      *  closed. Makes all future read and write 
-     *  operations impossible. Closing the 
-     *  client does not close the underlying 
-     *  streams.
+     *  operations impossible. Calling `close` releases the 
+     *  reader and writer locks.
      * 
      *  **Example**
      *  ```ts
@@ -278,7 +283,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *      console.log(x) 
      *  }
      * 
-     *  console.log(db.commandReplyCount) // 0
+     *  console.log(db.commandCount) // 0
      *  ```
      */
     [Symbol.asyncIterator]() : AsyncIterator<Reply> {
@@ -287,7 +292,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
 
         return {
 
-            next: async () => proc.commandReplyCount ? { 
+            next: async () => proc.commandCount ? { 
                 done: !1, value: await proc.read()
             } : {
                 done: !0
@@ -304,16 +309,6 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      */
     [Symbol.dispose]() : void {
         return this.close()
-    }
-
-    /**
-     *  Calls `Client.close()` when all 
-     *  write operations are complete.\
-     *  Implementation of the `Disposable`
-     *  protocol.
-     */
-    async [Symbol.asyncDispose]() : Promise<void> {
-        return await this.nop().then(() => this.close())
     }
 
 }

@@ -49,7 +49,6 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
 
     /**
      *  Add new command to encode.
-     *  @param cmd Command to add to the buffer.
      */
     add(cmd: Command) {
         this.commands.push(cmd)
@@ -69,7 +68,6 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
 
     /**
      *  Flush the command buffer.
-     *  @param max Maximum number of commands to remove from the buffer.
      */
     flush(max = Infinity) : Uint8Array | null {
 

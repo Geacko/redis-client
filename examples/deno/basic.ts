@@ -1,5 +1,6 @@
 #! /usr/bin/env -S deno run --allow-net
 
+import type { Hash } from "@geacko/resp3-parser"
 import { 
     Client 
 } from "../../mod.ts"
@@ -9,6 +10,6 @@ const db = new Client(await Deno.connect({
 }))
 
 // send 'HELLO' with `send` and read the response with `read`
-console.log(await db.send([ 'HELLO' , '3' ]).read())
+console.log(new Map(await db.send([ 'HELLO' , '3' ]).read<Hash>()))
 
 db.close()

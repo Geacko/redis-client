@@ -1,6 +1,6 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import { Client, type Connection } from '../../mod.ts'
+import { Client, type Conn } from '../../mod.ts'
 import { createConnection, type Socket, type NetConnectOpts } from 'node:net'
 import { Readable, Writable } from 'node:stream'
 
@@ -11,7 +11,7 @@ function connect(
     let s!: Socket
 
     // convert NodeJS net.Socket to Connection type
-    return new Promise<Connection>(ret => (s = createConnection(opts, () => {
+    return new Promise<Conn>(ret => (s = createConnection(opts, () => {
         
         s.pause()
 
@@ -24,7 +24,7 @@ function connect(
                 s.destroy()
             }
         
-        })
+        } as const)
 
     })))
 
@@ -41,7 +41,7 @@ function* cmds(
 
 }
 
-await using db = new Client(await connect({
+const db = new Client(await connect({
     port: 6379
 }))
 
@@ -57,3 +57,5 @@ for (let i = 0; i < 100; i++) {
     )).readall())
 
 }
+
+db.close()
