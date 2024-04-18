@@ -15,11 +15,11 @@ import {
  *  @internal 
  */
 export class CommandProcessor {
-    
+
     /**
-     *  Writable stream.
+     *  Writer
      */
-    private output
+    private writer
 
     /**
      *  RESP (v2/v3) reader.
@@ -84,7 +84,7 @@ export class CommandProcessor {
     ) {
 
         this.reader = readable.pipeThrough(new Resp3DecoderStream()).getReader()
-        this.output = writable
+        this.writer = writable.getWriter()
 
     }
 
@@ -120,18 +120,15 @@ export class CommandProcessor {
     private async processInternal() {
 
         const {
-            queue, output
+            queue, writer
         } = this
 
-        let readable ; while ((
-            readable = queue.next().value
+        let xs ; while ((
+            xs = queue.next().value
         )) {
-    
-            this.closed || await readable.pipeTo(output, {
-                preventClose: true,
-                preventAbort: true,
-            })
-    
+
+            this.closed || await writer.write(xs)
+
         }
 
     }

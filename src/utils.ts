@@ -1,16 +1,10 @@
 import type {
-    Command,
-    ReadableStreamProvider
+    Command
 } from './types.ts'
 
 /** @internal */
 export function isCmd(cmd: unknown) : cmd is Command {
     return cmd instanceof Array && typeof cmd[0] == `string`
-}
-
-/** @internal */
-export function isReadableStreamProvider(x: unknown) : x is ReadableStreamProvider {
-    return typeof (x as { stream: unknown }).stream == 'function'
 }
 
 /** @internal */

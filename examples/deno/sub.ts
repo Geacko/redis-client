@@ -1,5 +1,6 @@
 #! /usr/bin/env -S deno run --allow-net
 
+import { type Push, Failure } from "@geacko/resp3-parser"
 import { 
     Client 
 } from "../../mod.ts"
@@ -18,9 +19,9 @@ let out
 
 while(1) {
 
-    console.log('receive >', out = await db.read<string[]>())
+    console.log('receive >', out = await db.read<Push | Failure>())
 
-    if (out instanceof Error || out[2] == `QUIT`) {
+    if (out instanceof Failure || out[2] == `QUIT`) {
         break
     }
 

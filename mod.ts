@@ -3,7 +3,6 @@ export type {
     Command,
     CommandBatch,
     Connection,
-    ReadableStreamProvider,
 } from './src/types.ts'
 
 export {

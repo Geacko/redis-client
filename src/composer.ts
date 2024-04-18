@@ -1,80 +1,36 @@
-type Composable = Uint8Array | ReadableStream<Uint8Array>
-
-function createNext(
-    i: Iterator<Uint8Array | ReadableStream<Uint8Array>, void>
+function sum(
+    a: number,
+    x: Uint8Array
 ) {
 
-    // initialize current iterator
-    let c = i as typeof i | AsyncIterator<Uint8Array, void> | undefined
-
-    return async () : Promise<IteratorResult<Uint8Array, void>> => {
-            
-        // until current iterator is not `undefined`
-        while (c) {
-
-            let r = c.next()
-
-            if (r instanceof Promise) {
-                r = await r
-            }
-
-            const {
-                value: x
-            } = r
-
-            // end of the current iterator
-            if (x === void 0) {
-
-                // if current iterator == main iterator -> end
-                // else -> go back to the main iterator
-                c = i == c ? void 0
-                  : i
-
-                continue
-
-            }
-
-            // if current value is a ReadableStream -> delegate
-            if (x instanceof ReadableStream) {
-
-                c = x[Symbol.asyncIterator]()
-                continue
-            
-            }
-
-            // yield
-            return { 
-                value: x
-            }
-
-        }
-
-        // end
-        return { 
-            done: true, value: void 0
-        }
-
-    }
+    return a + x.byteLength
 
 }
 
 /** 
  * @internal 
  */
-export class Composer {
+export class BlobComposer {
 
     /**
-     *  writable components
+     *  blob parts
      */
-    private components = [
+    private parts = [
         // ...
-    ] as Composable[]
+    ] as Uint8Array[]
+
+    /**
+     *  size of the blob in bytes
+     */
+    get size() {
+        return this.parts.reduce(sum, 0)
+    }
 
     /**
      *  add new component
      */
-    add(component: Composable) {
-        this.components.push(component)
+    add(part: Uint8Array) {
+        this.parts.push(part)
     }
 
     /**
@@ -82,49 +38,25 @@ export class Composer {
      */
     clear() {
         
-        this.components = [
+        this.parts = [
             // ...
         ]
 
     }
 
     /**
-     *  flush & create a new Iterator
+     *  flush
      */
-    compose() : ReadableStream<Uint8Array> | null {
-        
-        const xs = this.components.splice(0)
-        const {
-            length: count
-        } = xs
+    compose() : Uint8Array {
 
-        if (count == 0) {
-            return null
+        const out = new Uint8Array(this.size)
+
+        let i = 0
+        for (const x of this.parts.splice(0)) {
+            out.set(x, i); i += x.byteLength
         }
 
-        if (count >= 2) {
-
-            return ReadableStream.from({
-
-                [Symbol.asyncIterator]() {
-    
-                    return { 
-                        next: createNext(xs[Symbol.iterator]()) 
-                    }
-                
-                }
-    
-            })
-
-        }
-
-        const x = xs[0]!
-
-        if (x instanceof Uint8Array) {
-            return ReadableStream.from([ x ])
-        }
-
-        return x
+        return out
 
     }
 

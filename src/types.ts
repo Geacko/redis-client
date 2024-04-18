@@ -1,34 +1,11 @@
 /**
- *  ReadableStreamProvider interface representing 
- *  a Blob-like object.
- */
-export interface ReadableStreamProvider {
-
-    /**
-     *  data size in bytes
-     */
-    readonly size: number
-
-    /** 
-     *  provides the ReadableStream associated 
-     *  with the data 
-     */
-    stream(
-        // void
-    ) : ReadableStream<Uint8Array>
-
-}
-
-/**
  *  Command argument type
  */
 export type CommandArgument
     = string 
     | number 
-    | bigint 
+    | bigint
     | Uint8Array
-    | ReadableStream<Uint8Array>
-    | ReadableStreamProvider
 
 /**
  *  Command type

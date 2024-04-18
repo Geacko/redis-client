@@ -3,13 +3,12 @@ import type {
 } from './types.ts'
 
 import { 
-    Composer
+    BlobComposer
 } from './composer.ts'
 
 import {
     computeByteCount,
     encode,
-    isReadableStreamProvider,
 } from './utils.ts'
 
 const enum Char {
@@ -26,12 +25,12 @@ const enum Char {
 /**
  *  @internal
  */
-export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>, void> {
+export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
 
     /**
      *  Data composer.
      */
-    private composer = new Composer()
+    private composer = new BlobComposer()
 
     /**
      *  Commands waiting to be encoded.
@@ -72,7 +71,7 @@ export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>,
      *  Flush the command buffer.
      *  @param max Maximum number of commands to remove from the buffer.
      */
-    flush(max = Infinity) : ReadableStream<Uint8Array> | null {
+    flush(max = Infinity) : Uint8Array | null {
 
         const commands = this.commands.splice(0, max)[Symbol.iterator]() as Iterator<Command, void>
         const composer = this.composer
@@ -105,11 +104,17 @@ export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>,
                 // small (< 1024 bytes) 
                 if (typeof x == `string`) {
 
-                    end += Char[`$`] + computeByteCount(x)
-                        +  Char[`¶`] + x
-                        +  Char[`¶`]
+                    if (x.length < 1024) {
 
-                    continue
+                        end += Char[`$`] + computeByteCount(x)
+                            +  Char[`¶`] + x
+                            +  Char[`¶`]
+
+                        continue
+
+                    }
+
+                    x = encode(x)
 
                 }
 
@@ -129,71 +134,6 @@ export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>,
                     
                     continue
                 
-                }
-
-                if (isReadableStreamProvider(x)) {
-
-                    const i = x.stream()
-                    const {
-                        size: s
-                    } = x
-
-                    if (isFinite(s) && s >= 0) {
-
-                        end += Char[`$`] + s 
-                            +  Char[`¶`]  
-
-                        composer.add(encode(end))
-                        composer.add(i)
-
-                        end = Char[`¶`]
-
-                        continue
-
-                    }
-
-                    x = i
-
-                }
-
-                // May be one day ...
-                if (x instanceof ReadableStream) {
-                    
-                    end += Char[`$`]
-                        +  Char[`?`] 
-
-                    const i = x.pipeThrough(new TransformStream({transform(
-                        chunk, ctr
-                    ) {
-
-                        const {
-                            byteLength: s
-                        } = chunk
-                          
-                        if (s == 0) {
-                            return
-                        }
-
-                        ctr.enqueue(encode(
-                            Char[`¶`] + 
-                            Char[`;`] + s + 
-                            Char[`¶`]
-                        ))
-                            
-                        ctr.enqueue(chunk)
-
-                    }}))
-
-                    composer.add(encode(end))
-                    composer.add(i)
-
-                    end = Char[`¶`]
-                        + Char[`;`]
-                        + Char[`Ø`]
-                        + Char[`¶`]
-
-                    continue
-
                 }
 
                 else {
@@ -232,7 +172,7 @@ export class CommandEncoderQueue implements Iterator<ReadableStream<Uint8Array>,
      *  protocol. Returns the next stream 
      *  to write.
      */
-    next() : IteratorResult<ReadableStream<Uint8Array>, void> {
+    next() : IteratorResult<Uint8Array, void> {
 
         // Note: Only 10,000 commands maximum at the time
         const x = this.flush(10_000) ??  void 0
