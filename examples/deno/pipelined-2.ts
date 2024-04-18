@@ -20,11 +20,11 @@ const db = new Client(await Deno.connect({
 }))
 
 // send 100 batches of 10_000 'PING' each
-for (let i = 0; i < 100; i++) {
+for (let i = 0; i < 5; i++) {
 
     console.log(await db.send(cmds(
-        (i + 0) * 10_000,
-        (i + 1) * 10_000,
+        (i + 0) * 10_000_000,
+        (i + 1) * 10_000_000,
     )).readall())
 
 }

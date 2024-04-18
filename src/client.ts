@@ -19,7 +19,7 @@ import {
 /**
  *  Stream handler.
  */
-export class Client implements Disposable, AsyncIterable<Reply> {
+export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply> {
 
     /**
      *  command processor
@@ -53,7 +53,7 @@ export class Client implements Disposable, AsyncIterable<Reply> {
     }
 
     /**
-     *  Returns `true` if the writing process is 
+     *  Returns `true` if the writing or reading process is 
      *  still in progress. `false` otherwise.
      * 
      *  **Example**
@@ -61,12 +61,12 @@ export class Client implements Disposable, AsyncIterable<Reply> {
      *  ```ts
      *  db.send(['PING'])
      *  console.log(db.isBusy) // true
-     *  await db.nop()
+     *  await db.read()
      *  console.log(db.isBusy) // false
      *  ```
      */
     get isBusy() : boolean {
-        return this.#proc.isWriting
+        return this.#proc.isReading || this.#proc.isWriting
     }
 
     /**
@@ -309,6 +309,21 @@ export class Client implements Disposable, AsyncIterable<Reply> {
      */
     [Symbol.dispose]() : void {
         return this.close()
+    }
+
+    /**
+     *  Calls `Client.close()` when all 
+     *  write operations are complete.\
+     *  Implementation of the `AsyncDisposable`
+     *  protocol.
+     */
+    [Symbol.asyncDispose]() : Promise<void> {
+        
+        let i = 0
+        return new Promise<void>(ret => i = setInterval(() => {
+            this.isBusy || this.close() || ret(clearInterval(i))
+        } , 0))
+
     }
 
 }
