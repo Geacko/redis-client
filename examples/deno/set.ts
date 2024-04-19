@@ -1,4 +1,5 @@
 #! /usr/bin/env -S deno run --allow-net
+
 import { Failure, type Hash } from "@geacko/resp3-parser"
 import { 
     Client

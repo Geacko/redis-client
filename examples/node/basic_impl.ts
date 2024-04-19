@@ -1,6 +1,6 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import { Client, type Conn } from '../../mod.ts'
+import { Client, type UnderlyingDuplex } from '../../mod.ts'
 import { createConnection, type Socket, type NetConnectOpts } from 'node:net'
 import { Readable, Writable } from 'node:stream'
 
@@ -10,8 +10,8 @@ function connect(
 
     let s!: Socket
 
-    // convert NodeJS net.Socket to Connection type
-    return new Promise<Conn>(ret => (s = createConnection(opts, () => {
+    // convert NodeJS net.Socket to UnderlyingDuplex type
+    return new Promise<UnderlyingDuplex>(ret => (s = createConnection(opts, () => {
         
         s.pause()
 

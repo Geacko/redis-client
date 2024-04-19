@@ -2,9 +2,7 @@ export type {
     Command,
     CommandArgument,
     CommandBatch,
-    Conn,
-    Closable,
-    Duplex,
+    UnderlyingDuplex,
 } from './src/types.ts'
 
 export {

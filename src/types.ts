@@ -22,7 +22,7 @@ export type CommandBatch = Iterable<Command> | ArrayLike<Command>
 /**
  *  Duplex interface
  */
-export interface Duplex {
+export interface UnderlyingDuplex {
     
     /** 
      *  Readable stream linked to the 
@@ -36,23 +36,11 @@ export interface Duplex {
      */
     readonly writable: WritableStream<Uint8Array>
 
-}
-
-/**
- *  Closable interface
- */
-export interface Closable {
-
     /**
      *  Function called when the `close` method 
      *  of the `Client` instance encapsulating 
      *  the connection is called.
      */
-    close(): void
+    close?(): void
 
 }
-
-/**
- *  Conn interface
- */
-export type Conn = Duplex & Closable

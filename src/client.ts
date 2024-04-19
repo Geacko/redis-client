@@ -1,7 +1,7 @@
 import type { 
     Command,
     CommandBatch,
-    Conn,
+    UnderlyingDuplex,
 } from './types.ts'
 
 import type {
@@ -29,7 +29,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
     /**
      *  underlying duplex
      */
-    #conn: Conn
+    #conn: UnderlyingDuplex
 
     /**
      *  Number of responses remaining.
@@ -88,7 +88,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  Constructor.
      */
     constructor(
-        connection: Conn
+        connection: UnderlyingDuplex
     ) {
 
         this.#conn = connection
@@ -260,6 +260,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
         }
 
         this.#proc.close()
+        this.#conn.close &&
         this.#conn.close()
     
     }
