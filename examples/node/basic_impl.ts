@@ -1,6 +1,6 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import { Client, type UnderlyingDuplex } from '../../mod.ts'
+import { Client, type Gateway } from '../../mod.ts'
 import { createConnection, type Socket, type NetConnectOpts } from 'node:net'
 import { Readable, Writable } from 'node:stream'
 
@@ -10,8 +10,8 @@ function connect(
 
     let s!: Socket
 
-    // convert NodeJS net.Socket to UnderlyingDuplex type
-    return new Promise<UnderlyingDuplex>(ret => (s = createConnection(opts, () => {
+    // convert NodeJS net.Socket to Gateway type
+    return new Promise<Gateway>(ret => (s = createConnection(opts, () => {
         
         s.pause()
 
@@ -48,13 +48,20 @@ const db = new Client(await connect({
 // switch protocol RESPv2 -> RESPv3
 await db.send([ 'HELLO', '3' ]).read()
 
-// send 100 batches of 10_000 'PING' each
-for (let i = 0; i < 100; i++) {
+const chunksize = 10_000
+const count     = 100
 
-    console.log(await db.send(cmds(
-        (i + 0) * 10_000,
-        (i + 1) * 10_000,
-    )).readall())
+// send 100 batches of 10_000 'PING' each
+for (let i = 0; i < count; i++) {
+    
+    db.send(cmds(
+        (i + 0) * chunksize,
+        (i + 1) * chunksize,
+    ))
+
+    console.log(
+        await db.readMany(chunksize)
+    )
 
 }
 

@@ -32,7 +32,7 @@ for (let i = 0; i < 100; i++) {
 await db.nop()
 
 console.log(
-    'COMPLETE >', db.commandCount
+    'COMPLETE'
 )
 
 db.close()

@@ -1,4 +1,2 @@
 .vscode
-.github
 deno.lock
-dump.rdb

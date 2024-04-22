@@ -1,8 +1,7 @@
 export type {
+    Gateway,
     Command,
-    CommandArgument,
-    CommandBatch,
-    UnderlyingDuplex,
+    CommandArgument
 } from './src/types.ts'
 
 export {

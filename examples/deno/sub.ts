@@ -1,29 +1,35 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import { type Push, Failure } from "@geacko/resp3-parser"
+import type { Push } from "@geacko/resp3-parser"
 import { 
     Client 
 } from "../../mod.ts"
 
-const db = new Client(await Deno.connect({
-    port: 6379
+await using db = new Client(await Deno.connect({ 
+    port: 6379 
 }))
 
 console.log(await db.send([ 'HELLO' , '3' ]).read())
-console.log(await db.send([ 
-    'SUBSCRIBE' , 'my_channel_name' 
-]).read())
+
+db.send([ 'SUBSCRIBE' , 
+    'ch:0' , 
+    'ch:1' , 
+    'ch:2' ,
+    'ch:3' ,
+])
 
 let out
 
-while(1) {
+do {
 
-    console.log('receive >', out = await db.read<Push | Failure>())
+    out = await db.read<Push>()
 
-    if (out instanceof Failure || out[2] == `QUIT`) {
-        break
-    }
+    // ...
+    // ...
+    // ...
 
-}
+    console.log(out)
 
-db.close()
+} while(!(
+    out[2] == `QUIT`
+))

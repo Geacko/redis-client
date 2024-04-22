@@ -71,13 +71,11 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
      */
     flush(max = Infinity) : Uint8Array | null {
 
-        const commands = this.commands.splice(0, max)[Symbol.iterator]() as Iterator<Command, void>
+        const commands = this.commands.splice(0, max)
         const composer = this.composer
 
         let end = ``
-        let cmd ; while ((
-            cmd = commands.next().value
-        )) {
+        for (const cmd of commands) {
 
             const [
                 x, ...xs

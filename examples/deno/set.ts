@@ -19,13 +19,6 @@ if (hi instanceof Failure) {
     throw '😵'
 }
 
-console.log(hi)
-
-db.send([ 'SET' , 'some-key', '> This is a simple test 😉 !' ])
-db.send([ 'GET' , 'some-key' ])
-db.send([ 'DEL' , 'some-key' ])
-
-// read all responses
-for await (const x of db) {
-    console.log(x)
-}
+console.log(await db.send([ 'SET' , 'some-key', '> This is a simple test 😉 !' ]).read())
+console.log(await db.send([ 'GET' , 'some-key' ]).read())
+console.log(await db.send([ 'DEL' , 'some-key' ]).read())

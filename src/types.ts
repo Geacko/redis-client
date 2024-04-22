@@ -15,14 +15,9 @@ export type Command = readonly [
 ]
 
 /**
- *  Command batch type
+ *  Gateway interface
  */
-export type CommandBatch = Iterable<Command> | ArrayLike<Command>
-
-/**
- *  Duplex interface
- */
-export interface UnderlyingDuplex {
+export interface Gateway {
     
     /** 
      *  Readable stream linked to the 

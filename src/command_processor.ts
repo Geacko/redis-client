@@ -3,12 +3,16 @@ import type {
 } from './types.ts'
 
 import { 
-    Resp3DecoderStream, Push
+    Resp3DecoderStream, type Resp3ParserOptions
 } from '@geacko/resp3-parser'
 
 import { 
     CommandEncoderQueue 
 } from './command_encoder_queue.ts'
+
+const NOP = { 
+    value: void 0 
+}
 
 /** 
  *  @internal 
@@ -32,34 +36,21 @@ export class CommandProcessor {
     private currentWritingProcess?: Promise<void>
 
     /**
-     *  Number of replies available for 
-     *  reading.
-     */
-    private count = 0
-
-    /**
-     *  number of replies being decoded
-     */
-    private processing = 0
-
-    /**
      *  Queue providing data to write 
      *  to the connection.
      */
     private queue = new CommandEncoderQueue()
 
     /**
+     *  number of replies being decoded
+     */
+    private readings = 0
+
+    /**
      *  Set to "true" if no read and write 
      *  operations are allowed.
      */
-    private closed = false
-
-    /**
-     *  Number of pending commands.
-     */
-    get commandCount() {
-        return Math.max(0, this.count - this.processing)
-    }
+    private closed = !1
 
     /**
      *  Returns `true` if the writing process 
@@ -74,7 +65,7 @@ export class CommandProcessor {
      *  is in progress. `false` otherwise.
      */
     get isReading() {
-        return this.processing != 0
+        return this.readings != 0
     }
 
     /**
@@ -87,13 +78,13 @@ export class CommandProcessor {
     /**
      *  constructor
      */
-    constructor(
-        readable: ReadableStream<Uint8Array>,
-        writable: WritableStream<Uint8Array>,
-    ) {
+    constructor(duplex: [
+        ReadableStream<Uint8Array>,
+        WritableStream<Uint8Array>
+    ] , opts: Resp3ParserOptions) {
 
-        this.reader = readable.pipeThrough(new Resp3DecoderStream()).getReader()
-        this.writer = writable.getWriter()
+        this.writer = duplex[1].getWriter()
+        this.reader = duplex[0].pipeThrough(new Resp3DecoderStream(opts)).getReader()
 
     }
 
@@ -101,14 +92,7 @@ export class CommandProcessor {
      *  Add new command to write.
      */
     add(cmd: Command) {
-
-        if (this.closed) {
-            return
-        }
-
-        this.queue.add(cmd)
-        this.count++    
-    
+        this.closed || this.queue.add(cmd)
     }
 
     /**
@@ -143,27 +127,22 @@ export class CommandProcessor {
 
     /**
      *  Reads the next available response 
-     *  in the stream. Returns always `null` if
+     *  in the stream. Returns always `Promise<undefined>` if
      *  the processor is closed.
      */
-    async read() {
+    async read<T>() {
 
-        if (this.closed) {
-            return null
-        }
-
-        this.processing++
+        this.readings++
 
         const {
             value: x
-        } = await this.reader.read()
+        } = await (
+            this.closed ? Promise.resolve(NOP) : this.reader.read()
+        )
 
-        this.processing--
+        this.readings--
 
-        this.count > 0 && !(x instanceof Push) &&
-        this.count--
-
-        return x!
+        return x as T
     
     }
 
@@ -175,10 +154,9 @@ export class CommandProcessor {
     close() {
 
         // clear state
-        this.count                 = 0
-        this.processing            = 0
         this.currentWritingProcess = void 0
         this.closed                = true
+        this.readings              = 0
         this.queue.clear()
 
         // release locks

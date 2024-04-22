@@ -15,20 +15,22 @@ console.log(
     await db.send([ 'HELLO' , '3' ]).read()
 )
 
-function* cmds() {
+function* cmds(count: number) {
 
-    for (let i = 0; i < 10_000; i++) {
+    for (let i = 0; i < count; i++) {
         yield [ 'PING' , i ] as const
     }
     
 }
+
+const count = 10_000
     
 // send 10,000 'PING'
-db.send(cmds())
+db.send(cmds(count))
     
 // read all replies
 console.log(
-    await db.readall()
+    await db.readMany(count)
 )
 ```
 
@@ -42,8 +44,8 @@ function connect(
 
     let s!: Socket
 
-    // convert NodeJS net.Socket to Connection type
-    return new Promise<Connection>(ret => (s = createConnection(opts, () => {
+    // convert NodeJS net.Socket to Gateway type
+    return new Promise<Gateway>(ret => (s = createConnection(opts, () => {
         
         s.pause()
 
@@ -72,19 +74,21 @@ console.log(
     await db.send([ 'HELLO' , '3' ]).read()
 )
 
-function* cmds() {
+function* cmds(count: number) {
 
-    for (let i = 0; i < 10_000; i++) {
+    for (let i = 0; i < count; i++) {
         yield [ 'PING' , i ] as const
     }
     
 }
+
+const count = 10_000
     
 // send 10,000 'PING'
-db.send(cmds())
+db.send(cmds(count))
     
 // read all replies
 console.log(
-    await db.readall()
+    await db.readMany(count)
 )
 ```

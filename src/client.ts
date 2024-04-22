@@ -1,11 +1,9 @@
 import type { 
-    Command,
-    CommandBatch,
-    UnderlyingDuplex,
+    Gateway, Command
 } from './types.ts'
 
-import type {
-    Reply
+import type { 
+    Resp3ParserOptions 
 } from '@geacko/resp3-parser'
 
 import { 
@@ -17,9 +15,9 @@ import {
 } from './utils.ts'
 
 /**
- *  Stream handler.
+ *  Client
  */
-export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply> {
+export class Client<T extends Command = Command> implements Disposable, AsyncDisposable {
 
     /**
      *  command processor
@@ -29,28 +27,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
     /**
      *  underlying duplex
      */
-    #conn: UnderlyingDuplex
-
-    /**
-     *  Number of responses remaining.
-     *  
-     *  **Example**
-     * 
-     *  ```ts
-     *  // send 2 commands
-     *  db.send(['PING', 0])
-     *  db.send(['PING', 1])
-     *  
-     *  console.log(db.commandCount) // 2
-     *  await db.read() // "0"
-     *  console.log(db.commandCount) // 1
-     *  await db.read() // "1"
-     *  console.log(db.commandCount) // 0
-     *  ```
-     */
-    get commandCount() : number {
-        return this.#proc.commandCount
-    }
+    #conn: Gateway
 
     /**
      *  Returns `true` if the writing or reading process is 
@@ -88,14 +65,14 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  Constructor.
      */
     constructor(
-        connection: UnderlyingDuplex
+        connection: Gateway, opts: Resp3ParserOptions = {}
     ) {
 
         this.#conn = connection
-        this.#proc = new CommandProcessor(
+        this.#proc = new CommandProcessor([
             connection.readable,
-            connection.writable
-        )
+            connection.writable,
+        ] , opts)
     
     }
 
@@ -125,15 +102,13 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  ])
      * 
      *  // Read all
-     *  for await (const x of db) {
-     *      console.log(x)
-     *  }
+     *  console.log(await db.readMany(6))
      *  ```
      * 
      *  @param cmd Command(s) to send.
      */
     send(
-        cmd: Command | CommandBatch
+        cmd: T | Iterable<T> | ArrayLike<T>
     ) : this {
 
         const proc = this.#proc
@@ -159,7 +134,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
 
     /**
      *  Reads the next available response in 
-     *  the queue. Returns always `null` if
+     *  the queue. Returns always `Promise<undefined>` if
      *  the client is closed.
      * 
      *  **Example**
@@ -176,47 +151,8 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  await db.read() // "2"
      *  ```
      */
-    read<T extends Reply>() : Promise<T> {
-        return this.#proc.read() as Promise<T>
-    }
-
-    /**
-     *  Returns multiples replies as an array.
-     *  If the `count` parameter is specified and is 
-     *  less than the number of available replies, 
-     *  returns `count` replies. If the `count` parameter 
-     *  is missing or greater than the number of available 
-     *  replies, returns all available replies.
-     *  
-     *  **Example**
-     * 
-     *  ```ts
-     *  db.send([ 'HELLO' , 3 ])
-     *  db.send([ 'PING' ])
-     *  db.send([ 'HSET' , 'some-key' , 'a' , 0 , 'b' , 1 ])
-     * 
-     *  type Replies = [ 
-     *      Record<string, any>, string, number 
-     *  ]
-     * 
-     *  console.log(await db.readall<Replies>())
-     *  ```
-     * 
-     */
-    readall<T extends Reply[]>() : Promise<T> {
-
-        const {
-            commandCount
-        } = this
-
-        const out = new Array(commandCount)
-
-        for (let i = 0; i < commandCount; i++) {
-            out[i] = this.read()
-        }
-
-        return Promise.all(out) as Promise<T>
-
+    read<T>() : Promise<T> {
+        return this.#proc.read<T>()
     }
 
     /**
@@ -242,6 +178,19 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
     }
 
     /**
+     *  ...
+     *  ...
+     *  ...
+     */
+    readMany<T extends unknown[]>(
+        count: number
+    ) : Promise<T> {
+        
+        return Promise.all(Array.from({ length: count }, () => this.read())) as Promise<T>
+
+    }
+
+    /**
      *  Closes the client if it is not already 
      *  closed. Makes all future read and write 
      *  operations impossible. Calling `close` releases the 
@@ -250,7 +199,7 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
      *  **Example**
      *  ```ts
      *  db.close()
-     *  console.log(await db.send([ 'PING' ]).read()) // null
+     *  console.log(await db.send([ 'PING' ]).read()) // undefined
      *  ```
      */
     close() {
@@ -263,44 +212,6 @@ export class Client implements Disposable, AsyncDisposable, AsyncIterable<Reply>
         this.#conn.close &&
         this.#conn.close()
     
-    }
-
-    /**
-     *  Iterates through all available replies.\ 
-     *  Impementation of the `AsyncIterator` 
-     *  protocol.
-     * 
-     *  **Example**
-     * 
-     *  ```ts
-     *  db.send([
-     *      ['PING', 0],
-     *      ['PING', 1],
-     *      ['PING', 2],
-     *      ['PING', 3],
-     *  ])
-     * 
-     *  for await (const x of db) {
-     *      console.log(x) 
-     *  }
-     * 
-     *  console.log(db.commandCount) // 0
-     *  ```
-     */
-    [Symbol.asyncIterator]() : AsyncIterator<Reply> {
-
-        const proc = this.#proc
-
-        return {
-
-            next: async () => proc.commandCount ? { 
-                done: !1, value: await proc.read()
-            } : {
-                done: !0
-            }
-
-        } as AsyncIterator<Reply>
-
     }
 
     /**
