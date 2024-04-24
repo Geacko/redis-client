@@ -71,12 +71,15 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
      */
     flush(max = Infinity) : Uint8Array | null {
 
+        max = Math.min(Math.max(0, max), this.commands.length)
+
         const commands = this.commands.splice(0, max)
         const composer = this.composer
 
         let end = ``
-        for (const cmd of commands) {
+        for (let i = 0; i < max; i++) {
 
+            const cmd = commands[i]!
             const [
                 x, ...xs
             ] = cmd
@@ -94,7 +97,13 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
                 +  Char[`¶`] + x
                 +  Char[`¶`]
 
-            for (let x of xs) {
+            const {
+                length: m
+            } = xs
+
+            for (let i = 0; i < m; i++) {
+
+                let x = xs[i]!
 
                 // We assume that `x` is relatively 
                 // small (< 1024 bytes) 

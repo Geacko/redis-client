@@ -1,3 +1,7 @@
+import { 
+    EMPTY_BUFFER 
+} from "./utils.ts"
+
 function sum(
     a: number,
     x: Uint8Array
@@ -27,6 +31,13 @@ export class BlobComposer {
     }
 
     /**
+     *  Number of parts
+     */
+    get count() {
+        return this.parts.length
+    }
+
+    /**
      *  add new component
      */
     add(part: Uint8Array) {
@@ -49,12 +60,28 @@ export class BlobComposer {
      */
     compose() : Uint8Array {
 
+        const {
+            count
+        } = this
+
+        if (count == 1) {
+            return this.parts.pop()!
+        }
+
+        if (count == 0) {
+            return EMPTY_BUFFER
+        }
+
         const out = new Uint8Array(this.size)
 
         let i = 0
-        for (const x of this.parts.splice(0)) {
+        for (const x of this.parts) {
             out.set(x, i); i += x.byteLength
         }
+
+        this.parts = [
+            // ...
+        ]
 
         return out
 

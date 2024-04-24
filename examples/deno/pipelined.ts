@@ -1,7 +1,7 @@
 #! /usr/bin/env -S deno run --allow-net
 
 import { 
-    Client, type Command
+    Client
 } from "../../mod.ts"
 
 const db = new Client(await Deno.connect({
@@ -9,21 +9,6 @@ const db = new Client(await Deno.connect({
 }))
 
 const count = 10_000
-
-// ----------------------------------------
-// Pipeline using an array of commands
-// ----------------------------------------
-{
-
-    db.send(Array.from({ length : count }, (_, i) => {
-        return [ 'PING' , i ] as Command
-    }))
-
-    console.log(
-        await db.readMany(count)
-    )
-
-}
 
 // ----------------------------------------
 // Pipeline using `send` multiple times
@@ -39,6 +24,41 @@ const count = 10_000
     )
 
 }
+// ----------------------------------------
+
+// ----------------------------------------
+// Pipeline using an array of commands
+// ----------------------------------------
+{
+
+    const cmds = Array.from({ length : count }, (_, i) => {
+        return [ 'PING' , i ] as const
+    })
+
+    db.send(cmds)
+
+    console.log(
+        await db.readMany(count)
+    )
+
+}
+// ----------------------------------------
+
+// ----------------------------------------
+// Pipeline using `ArrayLike` with mapfn
+// ----------------------------------------
+{
+
+    db.send({ length: count }, (_, m) => {
+        return [ 'PING', 2 * count + m ]
+    })
+
+    console.log(
+        await db.readMany(count)
+    )
+
+}
+// ----------------------------------------
 
 // ----------------------------------------
 // Pipeline using `Generator`
@@ -51,14 +71,14 @@ const count = 10_000
     ) {
 
         while (a < b) {
-            yield [ 'PING' , a++ ] as Command
+            yield [ 'PING' , a++ ] as const
         }
     
     }
 
     db.send(cmds(
-        2 * count,
-        3 * count
+        3 * count,
+        4 * count
     ))
 
     console.log(
@@ -66,5 +86,6 @@ const count = 10_000
     )
 
 }
+// ----------------------------------------
 
 db.close()

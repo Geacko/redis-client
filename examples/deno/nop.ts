@@ -1,7 +1,7 @@
 #! /usr/bin/env -S deno run --allow-net
 
 import { 
-    Client, type Command
+    Client
 } from "../../mod.ts"
 
 function* cmds(
@@ -10,7 +10,7 @@ function* cmds(
 ) {
 
     while (a < b) {
-        yield [ 'PING' , a++ ] as Command
+        yield [ 'PING' , a++ ] as const
     }
 
 }

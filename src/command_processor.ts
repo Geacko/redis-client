@@ -10,10 +10,6 @@ import {
     CommandEncoderQueue 
 } from './command_encoder_queue.ts'
 
-const NOP = { 
-    value: void 0 
-}
-
 /** 
  *  @internal 
  */
@@ -33,7 +29,7 @@ export class CommandProcessor {
      *  Result of current asynchronous 
      *  write process.
      */
-    private currentWritingProcess?: Promise<void>
+    private currProcess?: Promise<void>
 
     /**
      *  Queue providing data to write 
@@ -44,7 +40,7 @@ export class CommandProcessor {
     /**
      *  number of replies being decoded
      */
-    private readings = 0
+    private unsolved = 0
 
     /**
      *  Set to "true" if no read and write 
@@ -53,19 +49,11 @@ export class CommandProcessor {
     private closed = !1
 
     /**
-     *  Returns `true` if the writing process 
-     *  is in progress. `false` otherwise.
+     *  Number of commands in the queue 
+     *  waiting to be encoded.
      */
-    get isWriting() {
-        return this.currentWritingProcess instanceof Promise
-    }
-
-    /**
-     *  Returns `true` if the reading process 
-     *  is in progress. `false` otherwise.
-     */
-    get isReading() {
-        return this.readings != 0
+    get count() {
+        return this.queue.count
     }
 
     /**
@@ -73,6 +61,22 @@ export class CommandProcessor {
      */
     get isClosed() : boolean {
         return this.closed
+    }
+
+    /**
+     *  Returns `true` if the writing process 
+     *  is in progress. `false` otherwise.
+     */
+    get isWriting() {
+        return this.currProcess instanceof Promise
+    }
+
+    /**
+     *  Returns `true` if the reading process 
+     *  is in progress. `false` otherwise.
+     */
+    get isReading() {
+        return this.unsolved != 0
     }
 
     /**
@@ -100,8 +104,17 @@ export class CommandProcessor {
      */
     process() {
 
-        return this.currentWritingProcess ??= this.processInternal().then(() => {
-               this.currentWritingProcess = void 0
+        return this.currProcess ??= this.processInternal().then(() => {
+
+            // reset
+            this.currProcess = void 0
+            
+            // run it again if the command queue is 
+            // not empty
+            if (this.count) {
+                this.process()
+            }
+
         })
     
     }
@@ -130,19 +143,19 @@ export class CommandProcessor {
      *  in the stream. Returns always `Promise<undefined>` if
      *  the processor is closed.
      */
-    async read<T>() {
+    read<T>() {
 
-        this.readings++
+        if (this.closed) {
+            return Promise.resolve(void 0)
+        }
 
-        const {
-            value: x
-        } = await (
-            this.closed ? Promise.resolve(NOP) : this.reader.read()
-        )
+        this.unsolved++
 
-        this.readings--
+        const out = this.reader.read().then(({ value: x }) => (
+            this.unsolved-- , x as T
+        ))
 
-        return x as T
+        return out
     
     }
 
@@ -154,15 +167,14 @@ export class CommandProcessor {
     close() {
 
         // clear state
-        this.currentWritingProcess = void 0
-        this.closed                = true
-        this.readings              = 0
+        this.currProcess = void 0
+        this.closed      = true
+        this.unsolved    = 0
         this.queue.clear()
 
-        // release locks
-        this.writer.releaseLock()
-        this.reader.releaseLock()
-            
+        // dispose readable stream
+        this.reader.cancel()
+  
     }
 
 }

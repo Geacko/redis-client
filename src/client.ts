@@ -77,9 +77,9 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
     }
 
     /**
-     *  Send command(s).
+     *  Send a command.
      * 
-     *  **Basic Usage**
+     *  **Example**
      * 
      *  ```ts
      *  // Send the `HELLO` command
@@ -88,27 +88,52 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
      *  // Read the response
      *  console.log(await db.read())
      *  ```
-     *  **Pipeline**
+     * 
+     *  @param cmd Command to send.
+     */
+
+    send(
+        cmd : T
+    ) : this
+
+    /**
+     *  Send many commands at once.
+     * 
+     *  **Example**
      * 
      *  ```ts
-     *  // Send the 6 `PING`
+     *  // Send 5 `PING`
      *  db.send([
      *      [ 'PING', '0' ],
      *      [ 'PING', '1' ],
      *      [ 'PING', '2' ],
      *      [ 'PING', '3' ],
      *      [ 'PING', '4' ],
-     *      [ 'PING', '5' ],
      *  ])
      * 
+     *  // Send 5 other `PING`
+     *  db.send({ length: 5 }, (_, i) => {
+     *      return [ 'PING' , 5 + i ]
+     *  })
+     * 
      *  // Read all
-     *  console.log(await db.readMany(6))
+     *  console.log(await db.readMany(10))
      *  ```
      * 
-     *  @param cmd Command(s) to send.
+     *  @param cmd Commands to send.
+     *  @param map A mapping function to call on every element of the array
+     */
+
+    send(
+        cmd : Iterable<T> | ArrayLike<T>, map?: (x: T, i: number) => T
+    ) : this
+
+    /**
+     *  Send one or many commands at 
+     *  once.
      */
     send(
-        cmd: T | Iterable<T> | ArrayLike<T>
+        cmd: Iterable<T> | ArrayLike<T> | T, map: (x: T, i: number) => T = x => x
     ) : this {
 
         const proc = this.#proc
@@ -116,14 +141,13 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
         if (isCmd(cmd)) {
             proc.add(cmd)
         }
-
+        
         else {
 
-            Array.from(
-                cmd, 
-                cmd => proc.add(cmd)
+            Array.from(cmd, (x, i) => 
+                proc.add(map(x, i))
             )
-        
+
         }
 
         proc.process()
@@ -151,8 +175,43 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
      *  await db.read() // "2"
      *  ```
      */
-    read<T>() : Promise<T> {
-        return this.#proc.read<T>()
+    read<U>() : Promise<U | undefined> {
+        return this.#proc.read<U>()
+    }
+
+    /**
+     *  Reads multiple replies at once.
+     * 
+     *  **Example**
+     * 
+     *  ```ts
+     *  // Send 3 'PING'
+     *  db.send(['PING', '0'])
+     *  db.send(['PING', '1'])
+     *  db.send(['PING', '2'])
+     *  
+     *  // Read all
+     *  await db.readMany(3) // [ "0", "1", "2" ]
+     *  ```
+     */
+    readMany<U extends unknown[]>(
+        count: number
+    ) : Promise<U> {
+
+        const xs = new Array(count)
+
+        for (
+            let i = 0; 
+                i < count; 
+                i++
+        ) {
+
+            xs[i] = this.read()
+        
+        }
+
+        return <Promise<U>>Promise.all(xs)
+
     }
 
     /**
@@ -175,19 +234,6 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
      */
     nop() : Promise<void> {
         return this.#proc.process()
-    }
-
-    /**
-     *  ...
-     *  ...
-     *  ...
-     */
-    readMany<T extends unknown[]>(
-        count: number
-    ) : Promise<T> {
-        
-        return Promise.all(Array.from({ length: count }, () => this.read())) as Promise<T>
-
     }
 
     /**

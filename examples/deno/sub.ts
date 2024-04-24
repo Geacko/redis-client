@@ -1,28 +1,33 @@
 #! /usr/bin/env -S deno run --allow-net
 
-import type { Push } from "@geacko/resp3-parser"
 import { 
     Client 
 } from "../../mod.ts"
+
+type Push<T> = [ 
+    string , string , T 
+]
 
 await using db = new Client(await Deno.connect({ 
     port: 6379 
 }))
 
-console.log(await db.send([ 'HELLO' , '3' ]).read())
-
-db.send([ 'SUBSCRIBE' , 
+db.send([ 'SUBSCRIBE' ,     
     'ch:0' , 
     'ch:1' , 
     'ch:2' ,
     'ch:3' ,
 ])
 
+console.log(
+    await db.readMany<Push<number>[]>(4)
+)
+
 let out
 
 do {
 
-    out = await db.read<Push>()
+    out = await db.read<Push<string>>()
 
     // ...
     // ...
@@ -30,6 +35,6 @@ do {
 
     console.log(out)
 
-} while(!(
-    out[2] == `QUIT`
-))
+} while(
+    out[2] != `QUIT`
+)

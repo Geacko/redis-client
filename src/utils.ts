@@ -3,8 +3,16 @@ import type {
 } from './types.ts'
 
 /** @internal */
+export const EMPTY_BUFFER = new Uint8Array(0)
+
+/** @internal */
 export function isCmd(cmd: unknown) : cmd is Command {
     return cmd instanceof Array && typeof cmd[0] == `string`
+}
+
+/** @internal */
+export function isArrayLike<T>(xs: unknown) : xs is ArrayLike<T> {
+    return typeof (xs as { length: unknown }) == 'number'
 }
 
 /** @internal */
