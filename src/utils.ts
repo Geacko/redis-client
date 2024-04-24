@@ -12,7 +12,7 @@ export function isCmd(cmd: unknown) : cmd is Command {
 
 /** @internal */
 export function isArrayLike<T>(xs: unknown) : xs is ArrayLike<T> {
-    return typeof (xs as { length: unknown }) == 'number'
+    return typeof (xs as { length: unknown }).length == 'number'
 }
 
 /** @internal */

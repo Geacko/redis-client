@@ -29,7 +29,7 @@ export class CommandProcessor {
      *  Result of current asynchronous 
      *  write process.
      */
-    private currProcess?: Promise<void>
+    private currentProcess?: Promise<void>
 
     /**
      *  Queue providing data to write 
@@ -40,7 +40,7 @@ export class CommandProcessor {
     /**
      *  number of replies being decoded
      */
-    private unsolved = 0
+    private unsolveds = 0
 
     /**
      *  Set to "true" if no read and write 
@@ -68,7 +68,7 @@ export class CommandProcessor {
      *  is in progress. `false` otherwise.
      */
     get isWriting() {
-        return this.currProcess instanceof Promise
+        return this.currentProcess instanceof Promise
     }
 
     /**
@@ -76,7 +76,7 @@ export class CommandProcessor {
      *  is in progress. `false` otherwise.
      */
     get isReading() {
-        return this.unsolved != 0
+        return this.unsolveds != 0
     }
 
     /**
@@ -102,38 +102,29 @@ export class CommandProcessor {
     /**
      *  Execute the writing process.
      */
-    process() {
-
-        return this.currProcess ??= this.processInternal().then(() => {
-
-            // reset
-            this.currProcess = void 0
-            
-            // run it again if the command queue is 
-            // not empty
-            if (this.count) {
-                this.process()
-            }
-
-        })
-    
+    process() : Promise<void> {
+        return this.currentProcess ??= this.processInternal().then(() => this.currentProcess = void 0)
     }
 
     /**
      *  Writes all available data to the stream.
      */
-    private async processInternal() {
+    private processInternal() : Promise<void> {
 
-        const {
-            queue, writer
-        } = this
+        const xs = this.queue.next().value
 
-        let xs ; while ((
-            xs = queue.next().value
-        )) {
+        if (xs) {
+            
+            return this.writer.write(xs).then(
+                x => this.queue.count ? this.processInternal() : x
+            )
 
-            this.closed || await writer.write(xs)
+        }
 
+        else {
+
+            return Promise.resolve()
+        
         }
 
     }
@@ -143,16 +134,16 @@ export class CommandProcessor {
      *  in the stream. Returns always `Promise<undefined>` if
      *  the processor is closed.
      */
-    read<T>() {
+    read() {
 
         if (this.closed) {
             return Promise.resolve(void 0)
         }
 
-        this.unsolved++
+        this.unsolveds++
 
         const out = this.reader.read().then(({ value: x }) => (
-            this.unsolved-- , x as T
+            this.unsolveds-- , x
         ))
 
         return out
@@ -167,9 +158,9 @@ export class CommandProcessor {
     close() {
 
         // clear state
-        this.currProcess = void 0
-        this.closed      = true
-        this.unsolved    = 0
+        this.currentProcess = void 0
+        this.closed         = true
+        this.unsolveds      = 0
         this.queue.clear()
 
         // dispose readable stream

@@ -15,8 +15,8 @@ const count = 10_000
 // ----------------------------------------
 {
 
-    for (let i = count; i < 2 * count; i++) {
-        db.send([ 'PING' , i ])
+    for (let i = 0; i < count; i++) {
+        db.send([ 'PING' , 0 * count + i ])
     }
 
     console.log(
@@ -32,7 +32,7 @@ const count = 10_000
 {
 
     const cmds = Array.from({ length : count }, (_, i) => {
-        return [ 'PING' , i ] as const
+        return [ 'PING' , 1 * count + i ] as const
     })
 
     db.send(cmds)

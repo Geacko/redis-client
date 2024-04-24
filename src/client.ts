@@ -175,8 +175,8 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
      *  await db.read() // "2"
      *  ```
      */
-    read<U>() : Promise<U | undefined> {
-        return this.#proc.read<U>()
+    read<U>() : Promise<U> {
+        return this.#proc.read() as Promise<U>
     }
 
     /**

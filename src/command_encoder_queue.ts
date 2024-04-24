@@ -1,5 +1,6 @@
 import type { 
-    Command
+    Command,
+    CommandArgument
 } from './types.ts'
 
 import { 
@@ -66,107 +67,122 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
     
     }
 
+    private encodeBatch(
+        commands: Command[]
+    ) {
+
+        const {
+            length: count
+        } = commands
+
+        let end = ``
+        for (let i = 0; i < count; i++) {
+            end = this.encodeCmd(commands[i]!, end)
+        }
+
+        return end
+
+    }
+
+    private encodeCmd(
+        cmd: Command, end = ``
+    ) {
+
+        const [
+            x, ...xs
+        ] = cmd
+        
+        end += Char[`*`] + cmd.length 
+            +  Char[`¶`]
+
+        const {
+            length: s
+        } = x
+
+        // Note: We assume that the command name is 
+        // an ASCII string
+        end += Char[`$`] + s 
+            +  Char[`¶`] + x
+            +  Char[`¶`]
+
+        const {
+            length: m
+        } = xs
+
+        for (let i = 0; i < m; i++) {
+            end = this.encodeParameter(xs[i]!, end)
+        }
+
+        return end
+
+    }
+
+    private encodeParameter(
+        x: CommandArgument, end = ``
+    ) {
+
+        if (typeof x == `string`) {
+
+            if (x.length < 1024) {
+
+                return end 
+                     + Char[`$`] + computeByteCount(x)
+                     + Char[`¶`] + x
+                     + Char[`¶`]
+
+            }
+
+            x = encode(x)
+
+        }
+
+        if (x instanceof Uint8Array) {
+
+            const {
+                byteLength: s
+            } = x
+                
+            this.composer.add(encode(end + Char['$'] + s + Char['¶']))
+            this.composer.add(x)
+            
+            return Char[`¶`]
+        
+        }
+
+        else {
+
+            x = `` + x
+
+            return end 
+                 + Char[`$`] + x.length 
+                 + Char[`¶`] + x 
+                 + Char[`¶`]
+
+        }
+
+    }
+
     /**
      *  Flush the command buffer.
      */
     flush(max = Infinity) : Uint8Array | null {
 
-        max = Math.min(Math.max(0, max), this.commands.length)
+        const {
+            count
+        } = this
 
-        const commands = this.commands.splice(0, max)
-        const composer = this.composer
+        max = Math.min(max, count)
 
-        let end = ``
-        for (let i = 0; i < max; i++) {
-
-            const cmd = commands[i]!
-            const [
-                x, ...xs
-            ] = cmd
-            
-            end += Char[`*`] + cmd.length 
-                +  Char[`¶`]
-
-            const {
-                length: s
-            } = x
-
-            // Note: We assume that the command name is 
-            // an ASCII string
-            end += Char[`$`] + s 
-                +  Char[`¶`] + x
-                +  Char[`¶`]
-
-            const {
-                length: m
-            } = xs
-
-            for (let i = 0; i < m; i++) {
-
-                let x = xs[i]!
-
-                // We assume that `x` is relatively 
-                // small (< 1024 bytes) 
-                if (typeof x == `string`) {
-
-                    if (x.length < 1024) {
-
-                        end += Char[`$`] + computeByteCount(x)
-                            +  Char[`¶`] + x
-                            +  Char[`¶`]
-
-                        continue
-
-                    }
-
-                    x = encode(x)
-
-                }
-
-                if (x instanceof Uint8Array) {
-
-                    const {
-                        byteLength: s
-                    } = x
-                    
-                    end += Char[`$`] + s 
-                        +  Char[`¶`]  
-                        
-                    composer.add(encode(end))
-                    composer.add(x)
-                    
-                    end = Char[`¶`]
-                    
-                    continue
-                
-                }
-
-                else {
-
-                    const {
-                        length: s
-                    } = x + ``
-
-                    end += Char[`$`] + s 
-                        +  Char[`¶`] + x 
-                        +  Char[`¶`]
-
-                }
-
-            }
-            
-        }
-
-        // Note: `end` is empty only if there is 
-        // nothing to return
-        if (!end) {
+        if (max <= 0) {
             return null
         }
 
-        // encode the tail
-        composer.add(
-            encode(end)
-        )
+        const commands = this.commands
+        const composer = this.composer
+
+        composer.add(encode(
+            count == 1 ? this.encodeCmd(commands.pop()!) : this.encodeBatch(commands.splice(0, max))
+        ))
 
         return composer.compose()
 
