@@ -1,6 +1,6 @@
 {
   "name": "@geacko/redis-client",
-  "version": "3.3.0-beta",
+  "version": "3.3.1",
   "exports": "./mod.ts",
   "compilerOptions": {
     "noUncheckedIndexedAccess": true,

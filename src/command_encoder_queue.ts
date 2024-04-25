@@ -176,7 +176,7 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
      */
     flush(max = Infinity) : Uint8Array | null {
 
-        if (0 >= max) {
+        if (0 >= max || this.count == 0) {
             return null
         }
 

@@ -1,2 +1,4 @@
 .vscode
 deno.lock
+dump.rdb
+test.ts
