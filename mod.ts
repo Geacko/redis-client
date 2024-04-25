@@ -1,5 +1,5 @@
 export type {
-    Gateway,
+    DuplexStream,
     Command,
     CommandArgument
 } from './src/types.ts'

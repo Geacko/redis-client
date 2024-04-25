@@ -1,5 +1,5 @@
 import type { 
-    Gateway, Command
+    Command, DuplexStream
 } from './types.ts'
 
 import type { 
@@ -20,14 +20,24 @@ import {
 export class Client<T extends Command = Command> implements Disposable, AsyncDisposable {
 
     /**
-     *  command processor
+     *  Command processor
      */
     #proc: CommandProcessor
 
     /**
-     *  underlying duplex
+     *  Underlying duplex stream
      */
-    #conn: Gateway
+    #conn: DuplexStream
+
+    /**
+     *  Promise that fulfills when the stream 
+     *  closes, or rejects if the stream throws 
+     *  an error or the reader's lock is 
+     *  released.
+     */
+    get closed() : Promise<void> {
+        return this.#proc.closed
+    }
 
     /**
      *  Returns `true` if the writing or reading process is 
@@ -65,15 +75,12 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
      *  Constructor.
      */
     constructor(
-        connection: Gateway, opts: Resp3ParserOptions = {}
+        connection: DuplexStream, opts: Resp3ParserOptions = {}
     ) {
 
+        this.#proc = new CommandProcessor(connection, opts)
         this.#conn = connection
-        this.#proc = new CommandProcessor([
-            connection.readable,
-            connection.writable,
-        ] , opts)
-    
+        
     }
 
     /**
@@ -239,8 +246,8 @@ export class Client<T extends Command = Command> implements Disposable, AsyncDis
     /**
      *  Closes the client if it is not already 
      *  closed. Makes all future read and write 
-     *  operations impossible. Calling `close` releases the 
-     *  reader and writer locks.
+     *  operations impossible. 
+     *  Calling `close` cancel the reader.
      * 
      *  **Example**
      *  ```ts

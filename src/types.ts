@@ -15,9 +15,10 @@ export type Command = readonly [
 ]
 
 /**
- *  Gateway interface
+ *  Duplex stream interface.
+ *  Represents a connection-like object
  */
-export interface Gateway {
+export interface DuplexStream {
     
     /** 
      *  Readable stream linked to the 

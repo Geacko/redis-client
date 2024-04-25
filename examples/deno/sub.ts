@@ -12,6 +12,10 @@ await using db = new Client(await Deno.connect({
     port: 6379 
 }))
 
+db.closed.then(() => {
+    console.log('CLOSED')
+})
+
 db.send([ 'SUBSCRIBE' ,     
     'ch:0' , 
     'ch:1' , 
@@ -23,11 +27,15 @@ console.log(
     await db.readMany<Push<number>[]>(4)
 )
 
-let out
+while (1) {
 
-do {
+    const out = await db.read<Push<string> | undefined>()
 
-    out = await db.read<Push<string>>()
+    // stop if the connection is closed or if
+    // receive a `QUIT` 
+    if (out === void 0 || out[2] == `QUIT`) {
+        break
+    }
 
     // ...
     // ...
@@ -35,6 +43,4 @@ do {
 
     console.log(out)
 
-} while(
-    out[2] != `QUIT`
-)
+}

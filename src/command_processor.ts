@@ -1,5 +1,5 @@
 import type { 
-    Command 
+    Command, DuplexStream 
 } from './types.ts'
 
 import { 
@@ -9,6 +9,13 @@ import {
 import { 
     CommandEncoderQueue 
 } from './command_encoder_queue.ts'
+
+const enum Status {
+    
+    OPENED = 1,
+    CLOSED = 0,
+
+}
 
 /** 
  *  @internal 
@@ -38,15 +45,22 @@ export class CommandProcessor {
     private queue = new CommandEncoderQueue()
 
     /**
-     *  number of replies being decoded
+     *  Number of replies being decoded
      */
     private unsolveds = 0
 
     /**
-     *  Set to "true" if no read and write 
-     *  operations are allowed.
+     *  Status of the Processor.
      */
-    private closed = !1
+    private status = Status.OPENED
+
+    /**
+     *  Promise that fulfills when the stream 
+     *  closes, or rejects if the stream throws 
+     *  an error or the reader's lock is 
+     *  released.
+     */
+    readonly closed
 
     /**
      *  Number of commands in the queue 
@@ -60,7 +74,7 @@ export class CommandProcessor {
      *  Returns `true` if processor is closed.
      */
     get isClosed() : boolean {
-        return this.closed
+        return this.status == Status.CLOSED
     }
 
     /**
@@ -82,13 +96,16 @@ export class CommandProcessor {
     /**
      *  constructor
      */
-    constructor(duplex: [
-        ReadableStream<Uint8Array>,
-        WritableStream<Uint8Array>
-    ] , opts: Resp3ParserOptions) {
+    constructor({
+        readable,
+        writable,
+    } : DuplexStream , opts: Resp3ParserOptions) {
 
-        this.writer = duplex[1].getWriter()
-        this.reader = duplex[0].pipeThrough(new Resp3DecoderStream(opts)).getReader()
+        this.writer = writable.getWriter()
+        this.reader = readable.pipeThrough(new Resp3DecoderStream(opts)).getReader()
+        this.closed = this.reader.closed.then(() => {
+            this.close()
+        })
 
     }
 
@@ -96,27 +113,27 @@ export class CommandProcessor {
      *  Add new command to write.
      */
     add(cmd: Command) {
-        this.closed || this.queue.add(cmd)
+        this.status == Status.OPENED && this.queue.add(cmd)
     }
 
     /**
      *  Execute the writing process.
      */
     process() : Promise<void> {
-        return this.currentProcess ??= this.processInternal().then(() => this.currentProcess = void 0)
+        return this.currentProcess ??= this.processTick().then(() => this.currentProcess = void 0)
     }
 
     /**
      *  Writes all available data to the stream.
      */
-    private processInternal() : Promise<void> {
+    private processTick() : Promise<void> {
 
         const xs = this.queue.next().value
 
         if (xs) {
             
             return this.writer.write(xs).then(
-                x => this.queue.count ? this.processInternal() : x
+                x => this.queue.count ? this.processTick() : x
             )
 
         }
@@ -136,7 +153,7 @@ export class CommandProcessor {
      */
     read() {
 
-        if (this.closed) {
+        if (this.status == Status.CLOSED) {
             return Promise.resolve(void 0)
         }
 
@@ -152,14 +169,18 @@ export class CommandProcessor {
 
     /**
      *  Makes all future read and write operations 
-     *  impossible. Calling `close` releases the 
-     *  reader and writer locks.
+     *  impossible. 
+     *  Calling `close` cancel the reader.
      */
     close() {
 
+        if (this.status == Status.CLOSED) {
+            return
+        }
+
         // clear state
         this.currentProcess = void 0
-        this.closed         = true
+        this.status         = Status.CLOSED
         this.unsolveds      = 0
         this.queue.clear()
 

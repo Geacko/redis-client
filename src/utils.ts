@@ -11,11 +11,6 @@ export function isCmd(cmd: unknown) : cmd is Command {
 }
 
 /** @internal */
-export function isArrayLike<T>(xs: unknown) : xs is ArrayLike<T> {
-    return typeof (xs as { length: unknown }).length == 'number'
-}
-
-/** @internal */
 export const encode = TextEncoder.prototype.encode.bind(new TextEncoder())
 
 /** @internal */

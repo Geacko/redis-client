@@ -67,6 +67,9 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
     
     }
 
+    /**
+     *  Encode a batch of commands
+     */
     private encodeBatch(
         commands: Command[]
     ) {
@@ -84,6 +87,9 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
 
     }
 
+    /**
+     *  Encode a command
+     */
     private encodeCmd(
         cmd: Command, end = ``
     ) {
@@ -117,6 +123,9 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
 
     }
 
+    /**
+     *  Encode an argument
+     */
     private encodeParameter(
         x: CommandArgument, end = ``
     ) {
@@ -167,21 +176,17 @@ export class CommandEncoderQueue implements Iterator<Uint8Array, void> {
      */
     flush(max = Infinity) : Uint8Array | null {
 
-        const {
-            count
-        } = this
-
-        max = Math.min(max, count)
-
-        if (max <= 0) {
+        if (0 >= max) {
             return null
         }
 
-        const commands = this.commands
-        const composer = this.composer
+        const {
+            commands,
+            composer,
+        } = this
 
         composer.add(encode(
-            count == 1 ? this.encodeCmd(commands.pop()!) : this.encodeBatch(commands.splice(0, max))
+            this.encodeBatch(commands.splice(0, max))
         ))
 
         return composer.compose()
